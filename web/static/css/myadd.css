@@ -1,0 +1,47 @@
+body {
+  background-color: #fff;
+  color: #ccc;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.container {
+  display: flex;
+  height: 10vh;
+  justify-content: center;
+  align-items: center;
+}
+
+.search-form {
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  height: 110px;
+  width: 35%;
+}
+
+.searchbox {
+  width: 50px;
+  height: 50px;
+  font-size: 20px;
+  float: right;
+  border: 3px #ccc solid;
+  border-radius: 50%;
+  transition: all 0.5s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.searchbox:hover {
+  cursor: pointer;
+  box-shadow: 0 0 10px 0 #7f7f7f;
+}
+
+.searchbox:focus {
+  cursor: text;
+  width: 100%;
+  border-radius: 25px 25px 25px 25px;
+  outline: none;
+  text-indent: 15px;
+  background-position-x: 97%;
+  box-shadow: 0 0 10px 0 #7f7f7f;
+}
