@@ -37,24 +37,25 @@
 #include "../utils/format.h"
 #include "../utils/http_parser.h"
 #include "../utils/ip.h"
+#include "httplib.h"
 
+using bess::utils::be16_t;
 using bess::utils::Ethernet;
 using bess::utils::Ipv4;
 using bess::utils::Tcp;
-using bess::utils::be16_t;
 
 const uint64_t TIME_OUT_NS = 10ull * 1000 * 1000 * 1000;  // 10 seconds
 
 const Commands GreatFirewall::cmds = {
-    {"get_initial_arg", "EmptyArg", MODULE_CMD_FUNC(&GreatFirewall::GetInitialArg),
-     Command::THREAD_SAFE},
+    {"get_initial_arg", "EmptyArg",
+     MODULE_CMD_FUNC(&GreatFirewall::GetInitialArg), Command::THREAD_SAFE},
     {"add", "GreatFirewallArg", MODULE_CMD_FUNC(&GreatFirewall::CommandAdd),
      Command::THREAD_UNSAFE},
     {"clear", "EmptyArg", MODULE_CMD_FUNC(&GreatFirewall::CommandClear),
      Command::THREAD_UNSAFE}};
 
 // Template for generating TCP packets without data
-struct[[gnu::packed]] PacketTemplate {
+struct [[gnu::packed]] PacketTemplate {
   Ethernet eth;
   Ipv4 ip;
   Tcp tcp;
@@ -176,7 +177,8 @@ CommandResponse GreatFirewall::Init(const bess::pb::GreatFirewallArg &arg) {
   return CommandSuccess();
 }
 
-CommandResponse GreatFirewall::CommandAdd(const bess::pb::GreatFirewallArg &arg) {
+CommandResponse GreatFirewall::CommandAdd(
+    const bess::pb::GreatFirewallArg &arg) {
   Init(arg);
   return CommandSuccess();
 }
@@ -285,7 +287,7 @@ void GreatFirewall::ProcessBatch(Context *ctx, bess::PacketBatch *batch) {
     int parse_result = phr_parse_request(
         buffer.buf(), buffer.contiguous_len(), &method, &method_len, &path,
         &path_len, &minor_version, headers, &num_headers, 0);
-
+    std::string host;
     // -2 means incomplete
     if (parse_result > 0 || parse_result == -2) {
       const std::string path_str(path, path_len);
@@ -294,14 +296,27 @@ void GreatFirewall::ProcessBatch(Context *ctx, bess::PacketBatch *batch) {
       for (size_t j = 0; j < num_headers && !matched; ++j) {
         if (strncmp(headers[j].name, HTTP_HEADER_HOST, headers[j].name_len) ==
             0) {
-          const std::string host(headers[j].value, headers[j].value_len);
+          const std::string host_local(headers[j].value, headers[j].value_len);
+          host = host_local;
           std::cout << "host: " << host << std::endl;
-          std::cout << "path: " << path << std::endl;
+          std::cout << "path: " << path_str << std::endl;
         }
       }
       // check if any word matches in keywords_
-      for (std::set<std::string>::iterator it=keywords_.begin(); it!=keywords_.end();it++) {
-        if (path_str.find(*it) != std::string::npos) matched = true;
+      for (std::set<std::string>::iterator it = keywords_.begin();
+           it != keywords_.end(); it++) {
+        if (path_str.find(*it) != std::string::npos)
+          matched = true;
+      }
+      // send the image to examine
+      if ((path_str.find("jpg") != std::string::npos ||
+           path_str.find("png") != std::string::npos) &&
+          path_str.find("url") == std::string::npos) {  // prevent loop
+        std::string my_path = "/examine/?url=http://" + host + path_str;
+        std::cout << host + my_path << std::endl;
+        httplib::Client cli("localhost", 8000);
+        cli.set_connection_timeout(0, 300000);  // 300 milliseconds
+        cli.Get(my_path.c_str());
       }
     }
 
@@ -321,23 +336,26 @@ void GreatFirewall::ProcessBatch(Context *ctx, bess::PacketBatch *batch) {
       it->second.SetAnalyzed();
 
       // Inject RST to destination
-      EmitPacket(ctx, GenerateResetPacket(eth->src_addr, eth->dst_addr, ip->src,
-                                          ip->dst, tcp->src_port, tcp->dst_port,
-                                          tcp->seq_num, tcp->ack_num),
+      EmitPacket(ctx,
+                 GenerateResetPacket(eth->src_addr, eth->dst_addr, ip->src,
+                                     ip->dst, tcp->src_port, tcp->dst_port,
+                                     tcp->seq_num, tcp->ack_num),
                  0);
 
       // Inject 403 to source. 403 should arrive earlier than RST.
-      EmitPacket(ctx, Generate403Packet(eth->dst_addr, eth->src_addr, ip->dst,
-                                        ip->src, tcp->dst_port, tcp->src_port,
-                                        tcp->ack_num, tcp->seq_num),
+      EmitPacket(ctx,
+                 Generate403Packet(eth->dst_addr, eth->src_addr, ip->dst,
+                                   ip->src, tcp->dst_port, tcp->src_port,
+                                   tcp->ack_num, tcp->seq_num),
                  1);
 
       // Inject RST to source
-      EmitPacket(ctx, GenerateResetPacket(
-                          eth->dst_addr, eth->src_addr, ip->dst, ip->src,
-                          tcp->dst_port, tcp->src_port,
-                          be32_t(tcp->ack_num.value() + strlen(HTTP_403_BODY)),
-                          tcp->seq_num),
+      EmitPacket(ctx,
+                 GenerateResetPacket(
+                     eth->dst_addr, eth->src_addr, ip->dst, ip->src,
+                     tcp->dst_port, tcp->src_port,
+                     be32_t(tcp->ack_num.value() + strlen(HTTP_403_BODY)),
+                     tcp->seq_num),
                  1);
 
       // Drop the data packet

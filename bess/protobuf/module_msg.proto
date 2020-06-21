@@ -1203,7 +1203,6 @@ message MplsPopArg {
  * __Input Gates__: 1
  * __Output Gates__: many
  */
-
 message WorkerSplitArg {
   map<uint32, uint32> worker_gates = 1; // ogate -> worker mask
 }
