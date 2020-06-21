@@ -1,0 +1,18 @@
+# setup docker's network
+container_if = VPort(ifname='eth_vport_test', docker='vport_test', ip_addrs=['10.255.99.2/24'])
+# setup host's network
+host_if = VPort(ifname='eth_host', ip_addrs=['10.255.99.1/24'])
+
+# setup filter
+filter::GreatFirewall()
+blacklist_rules = ['voldemort', '佛地魔']
+filter.add(keywords=blacklist_rules)
+
+# merge all the input flow and output to host only
+merge::Merge()
+
+# build tunnel between host & docker
+PortInc(port=host_if) -> filter:0 -> PortOut(port=container_if)
+filter:1 -> 0:merge
+PortInc(port=container_if) -> 1:merge
+merge:0 -> PortOut(port=host_if)
