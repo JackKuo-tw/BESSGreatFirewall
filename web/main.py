@@ -61,7 +61,11 @@ def statics():
             content = f.readlines()
     except FileNotFoundError:
         return "No data"
-    return '<br>'.join(content)
+    rows = list()
+    for i in content:
+        rows.append(i.split('|'))
+    rows.reverse()
+    return render_template('statics.html', rows=rows)
 
 
 if __name__ == '__main__':

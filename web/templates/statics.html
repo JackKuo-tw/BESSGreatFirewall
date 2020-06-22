@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Cloud Computing Final Project</title>
+    <meta http-equiv="refresh" content="3" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Bootstrap  -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static',filename='css/bootstrap.css') }}"
+    />
+    <style>
+      body {
+        background-color: black;
+      }
+      h2,
+      th,
+      td {
+        color: white;
+      }
+
+      label {
+        font-size: 1.4em;
+      }
+      img {
+        width: 95%;
+      }
+    </style>
+  </head>
+
+  <body>
+    <a href="#" class="navbar-left"
+      ><img src="{{ url_for('static',filename='images/logo.png') }}"
+    /></a>
+    <div class="container">
+      <h2 class="text-center rainbow rainbow_text_animated">
+        Cloud Computing Final Project
+      </h2>
+      <div class="row">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Time</th>
+              <th scope="col">URL</th>
+              <th scope="col">Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr>
+              <th scope="row">{{ loop.index }}</th>
+              <td>{{ row[0] }}</td>
+              <td>{{ row[1] }}</td>
+              <td>{{ row[2] }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </body>
+  <!-- jQuery -->
+  <script src="{{ url_for('static',filename='js/jquery.min.js') }}"></script>
+  <!-- Bootstrap -->
+  <script src="{{ url_for('static',filename='js/bootstrap.min.js') }}"></script>
+</html>
