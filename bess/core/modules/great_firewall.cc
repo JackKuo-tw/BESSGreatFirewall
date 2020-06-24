@@ -178,7 +178,7 @@ CommandResponse GreatFirewall::Init(const bess::pb::GreatFirewallArg &arg) {
 }
 
 CommandResponse GreatFirewall::CommandAdd(
-    const bess::pb::GreatFirewallArg &arg) {
+  const bess::pb::GreatFirewallArg &arg) {
   Init(arg);
   return CommandSuccess();
 }
